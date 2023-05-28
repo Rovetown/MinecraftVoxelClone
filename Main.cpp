@@ -86,7 +86,6 @@ int main()
 
 
 
-
 	// glad: load all OpenGL function pointers
 	// ---------------------------------------
 	/*	
