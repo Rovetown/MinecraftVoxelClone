@@ -189,6 +189,12 @@ int main()
 		glBindVertexArray(VAO);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
+		// Shader Setting to move the Triangle by an offset; ourShader.[...] Stuff needs to be called in here!
+		// set an offset value and use it to move the triangle to the right
+		//float triangle_xPos_offset = 0.5f;
+		//ourShader.setFloat("xOffset", triangle_xPos_offset);
+
+
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 		// -------------------------------------------------------------------------------
 		glfwSwapBuffers(window);
