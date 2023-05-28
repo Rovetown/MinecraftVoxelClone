@@ -84,7 +84,7 @@ int main()
 	// Tell OpenGL to call framebuffer_size_callback() whenever the window is resized
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
-
+	// Test Comment to verify Git did not break stuff cause it is hella buggy
 
 	// glad: load all OpenGL function pointers
 	// ---------------------------------------
