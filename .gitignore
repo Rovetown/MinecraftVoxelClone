@@ -36,6 +36,7 @@ bld/
 # CUSTOM IGNORES
 glad.c
 Libraries/
+resources/
 *.sln
 *.vcxproj
 *.vcxproj.filters
