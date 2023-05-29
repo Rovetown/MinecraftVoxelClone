@@ -1,7 +1,7 @@
 #include <glad/glad.h> // Glad manages function pointers for OpenGL
 #include <GLFW/glfw3.h>
 
-#include "stb_image.h"
+#include <stb_image/stb_image.h>
 //#include <stb_image/stb_image.h> // Include it as a library header file from include location containing glad and glfw3
 
 #include "shader_s.h" // Use the shader header file from the Solution Explorer

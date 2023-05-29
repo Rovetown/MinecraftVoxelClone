@@ -35,6 +35,7 @@ bld/
 
 # CUSTOM IGNORES
 glad.c
+stb_image.h
 Libraries/
 resources/
 *.sln
