@@ -1,6 +1,10 @@
 #include <glad/glad.h> // Glad manages function pointers for OpenGL
 #include <GLFW/glfw3.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include <stb_image/stb_image.h>
 //#include <stb_image/stb_image.h> // Include it as a library header file from include location containing glad and glfw3
 
@@ -23,6 +27,12 @@ void processInput(GLFWwindow* window);
 // settings
 const unsigned int SCREEN_WIDTH = 800;
 const unsigned int SCREEN_HEIGHT = 600;
+
+
+// CASE 03: UNIFORM MIX VALUE FOR SHADER
+// stores how much we're seeing of either texture
+//float mixValue = 0.2f;
+
 
 int main()
 {
@@ -89,17 +99,28 @@ int main()
 	Shader ourShader("4.2.texture.vert", "4.2.texture.frag");
 
 	// compile and link the color shader program
-	Shader colorShaderProgram("Wireframe.vert", "Wireframe.frag"); // Assuming you have color.vert and color.frag shaders
+	Shader Wireframe("Wireframe.vert", "Wireframe.frag"); // Assuming you have color.vert and color.frag shaders
 
 
 	// set up vertex data (and buffer(s)) and configure vertex attributes
 	// ------------------------------------------------------------------
+
+
+	// If you use colors (idk if it works, outdated)
+	//float vertices[] = {
+	//	// positions          // colors           // texture coords
+	//	 0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
+	//	 0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+	//	-0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
+	//	-0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left 
+	//};
+
 	float vertices[] = {
-		// positions          // colors           // texture coords
-		 0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
-		 0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
-		-0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
-		-0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left 
+		// positions          // texture coords
+		 0.5f,  0.5f, 0.0f,   1.0f, 1.0f, // top right
+		 0.5f, -0.5f, 0.0f,   1.0f, 0.0f, // bottom right
+		-0.5f, -0.5f, 0.0f,   0.0f, 0.0f, // bottom left
+		-0.5f,  0.5f, 0.0f,   0.0f, 1.0f  // top left 
 	};
 
 	// If we wanna render a rectangle, we need to define the indices of the vertices that make up the rectangle (comment indeces out if you want a triangle)
@@ -107,6 +128,67 @@ int main()
 		0, 1, 3, // first triangle
 		1, 2, 3  // second triangle
 	};
+
+
+
+
+
+
+
+	/* CASE 01:
+		Experiment with the different texture wrapping methods by
+		specifying texture coordinates in the range 0.0f to 2.0f
+		instead of 0.0f to 1.0f. This below will show 4 smiley faces
+		on a single container image clamped at its edge:	
+	*/
+
+
+	/*
+		float vertices[] = {
+        // positions          // colors           // texture coords (note that we changed them to 2.0f!) | from bottom row to top = range[0.0f bis 2.0f]
+         0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   2.0f, 2.0f, // top right
+         0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   2.0f, 0.0f, // bottom right
+        -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
+        -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 2.0f  // top left 
+		};
+	*/
+
+
+
+
+
+
+
+
+
+
+
+	/* CASE 02:
+		Try to display only the center pixels of the texture image on the rectangle
+		in such a way that the individual pixels are getting visible by changing the texture coordinates.
+		Try to set the texture filtering method to GL_NEAREST to see the pixels more clearly:
+	*/
+
+
+
+
+	/*
+		float vertices[] = {
+        // positions          // colors           // texture coords (note that we changed them to 'zoom in' on our texture image)
+         0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   0.55f, 0.55f, // top right
+         0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   0.55f, 0.45f, // bottom right
+        -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.45f, 0.45f, // bottom left
+        -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.45f, 0.55f  // top left 
+		};
+	*/
+
+
+
+
+
+
+
+
 
 	unsigned int VBO, VAO, EBO;
 	/*
@@ -147,14 +229,18 @@ int main()
 	*/
 
 	// position attribute
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
-	// color attribute
+
+	// color attribute (for shader with color only)
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
+
 	// texture coord attribute
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(2);
+
+	
 
 	// You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
 	// VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
@@ -182,6 +268,19 @@ int main()
 	// set texture filtering parameters
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+
+
+
+	// NEEDED FOR CASE 02: (dont use at the moment since it was only used for an example)
+	// set texture filtering parameters
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); // set texture filtering to nearest neighbor to clearly see the texels/pixels
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	
+	
+	
+	
+	
 	// load image, create texture and generate mipmaps
 	int width, height, nrChannels;
 	stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
@@ -224,8 +323,9 @@ int main()
 	// -------------------------------------------------------------------------------------------
 	ourShader.use(); // don't forget to activate/use the shader before setting uniforms!
 	// either set it manually like so:
-	glUniform1i(glGetUniformLocation(ourShader.ID, "texture1"), 0);
+	//glUniform1i(glGetUniformLocation(ourShader.ID, "texture1"), 0);
 	// or set it via the texture class
+	ourShader.setInt("texture1", 0);
 	ourShader.setInt("texture2", 1);
 
 
@@ -259,20 +359,20 @@ int main()
 
 		// WireframeMode
 		if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS && !F2KeyPressed) {
-			WireframeActivated = !WireframeActivated;
-			F2KeyPressed = true;
+			WireframeActivated = !WireframeActivated; // Switches between true and false
+			F2KeyPressed = true; // So it doesn't keep switching and bugs out (becuase of how Windows registers the keypress by glfw3)
 		}
-		else if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_RELEASE)
+		else if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_RELEASE) // needs to be released so it can be pressed again (so it doesn't keep switching)
 		{
 			F2KeyPressed = false;
 		}
 
 		if (WireframeActivated) {
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			colorShaderProgram.use(); // For every shader we wanna use we need to compile n build it first in main()
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Wireframe
+			Wireframe.use(); // For every shader we wanna use we need to compile n build it first in main()
 		}
 		else {
-			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Default
 			ourShader.use();
 		}
 
@@ -289,6 +389,31 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, texture1);
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, texture2);
+
+
+
+
+
+
+
+		// Used for the rotating square
+		
+		 // create transformations
+		glm::mat4 transform = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+		transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f)); // this moves the position of the square (0,0,0 = center of window)
+		transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+
+		// get matrix's uniform location and set matrix (add new ones for each new shader)
+		unsigned int transformLoc = glGetUniformLocation(ourShader.ID, "transform");
+		unsigned int transformLocWireframe = glGetUniformLocation(Wireframe.ID, "transform");
+		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
+		glUniformMatrix4fv(transformLocWireframe, 1, GL_FALSE, glm::value_ptr(transform));
+
+
+
+
+
+
 
 		// render container
 		glBindVertexArray(VAO);

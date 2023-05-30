@@ -1,10 +1,12 @@
 #version 330 core
 layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec3 aColor;
+//layout (location = 1) in vec3 aColor;
 layout (location = 2) in vec2 aTexCoord;
 
-out vec3 ourColor;
+//out vec3 ourColor;
 out vec2 TexCoord;
+
+uniform mat4 transform;
 
 // color output:
 //out vec3 ourPosition; // needed for black corner
@@ -14,14 +16,17 @@ out vec2 TexCoord;
 
 void main()
 {
-	gl_Position = vec4(aPos, 1.0);
+	//gl_Position = vec4(aPos, 1.0);
+
+    // for transform:
+    gl_Position = transform * vec4(aPos, 1.0);
 
     // For offset:
     //gl_Position = vec4(aPos.x + xOffset, aPos.y, aPos.z, 1.0); // add the xOffset to the x position of the vertex position
     //ourPosition = aPos; // needed for black corner 
 
 
-	ourColor = aColor;
+	//ourColor = aColor;
 	TexCoord = vec2(aTexCoord.x, aTexCoord.y);
 }
 
