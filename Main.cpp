@@ -88,6 +88,10 @@ int main()
 	// ------------------------------------
 	Shader ourShader("4.2.texture.vert", "4.2.texture.frag");
 
+	// compile and link the color shader program
+	Shader colorShaderProgram("Wireframe.vert", "Wireframe.frag"); // Assuming you have color.vert and color.frag shaders
+
+
 	// set up vertex data (and buffer(s)) and configure vertex attributes
 	// ------------------------------------------------------------------
 	float vertices[] = {
@@ -227,17 +231,20 @@ int main()
 
 
 
+
 	// Technical Stuff
 	// ---------------------------------------------------------
-
-	// uncomment this call to draw in wireframe polygons.
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // if we have textures the textures will show as the lines (so use a set color for this)
 
 	// Once we go 3D use this (if you do it on fragment shaders it will break the Applications Render and show no shader (so only background color):
 	//glEnable(GL_DEPTH_TEST);
 
 
 
+
+
+
+	bool WireframeActivated = false;
+	bool F2KeyPressed = false;
 
 	// render loop
 	// -----------
@@ -246,6 +253,31 @@ int main()
 		// input
 		// -----
 		processInput(window);
+
+		
+
+
+		// WireframeMode
+		if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS && !F2KeyPressed) {
+			WireframeActivated = !WireframeActivated;
+			F2KeyPressed = true;
+		}
+		else if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_RELEASE)
+		{
+			F2KeyPressed = false;
+		}
+
+		if (WireframeActivated) {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			colorShaderProgram.use(); // For every shader we wanna use we need to compile n build it first in main()
+		}
+		else {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			ourShader.use();
+		}
+
+
+
 
 		// render
 		// ------
