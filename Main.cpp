@@ -5,11 +5,16 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+// stb_image.h is used to load images for textures
 #include <stb_image/stb_image.h>
 //#include <stb_image/stb_image.h> // Include it as a library header file from include location containing glad and glfw3
 
-#include "shader_s.h" // Use the shader header file from the Solution Explorer
-//#include <rovetownshaders/shader_s.h> // Include it as a library header file from include location containing glad and glfw3
+// This was used for 2D, not needed for 3D
+	//#include "shader_s.h" // Use the shader header file from the Solution Explorer
+	////#include <rovetownshaders/shader_s.h> // Include it as a library header file from include location containing glad and glfw3
+
+#include "shader_m.h" // Use the shader header file from the Solution Explorer
+//#include <rovetownshaders/shader_m.h> // Include it as a library header file from include location containing glad and glfw3
 
 #include <iostream>
 
@@ -27,6 +32,15 @@ void processInput(GLFWwindow* window);
 // settings
 const unsigned int SCREEN_WIDTH = 800;
 const unsigned int SCREEN_HEIGHT = 600;
+
+const unsigned int FOV = 45.0f;
+const unsigned int nearPlane = 0.1f;
+const unsigned int farPlane = 100.0f;
+
+const unsigned int view_x = 0.0f; // 0.0f = default | Width
+const unsigned int view_y = 0.0f; // 0.0f = default | Height
+const unsigned int view_z = -3.0f; // -3.0f = default | Depth
+
 
 
 // CASE 03: UNIFORM MIX VALUE FOR SHADER
@@ -96,7 +110,7 @@ int main()
 
 	// build and compile our shader zprogram
 	// ------------------------------------
-	Shader ourShader("4.2.texture.vert", "4.2.texture.frag");
+	Shader ourShader("6.3.coordinate_systems.vert", "6.3.coordinate_systems.frag");
 
 	// compile and link the color shader program
 	Shader Wireframe("Wireframe.vert", "Wireframe.frag"); // Assuming you have color.vert and color.frag shaders
@@ -107,27 +121,28 @@ int main()
 
 
 	// If you use colors (idk if it works, outdated)
-	//float vertices[] = {
-	//	// positions          // colors           // texture coords
-	//	 0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
-	//	 0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
-	//	-0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
-	//	-0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left 
-	//};
+		//float vertices[] = {
+		//	// positions          // colors           // texture coords
+		//	 0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
+		//	 0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+		//	-0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
+		//	-0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left 
+		//};
 
-	float vertices[] = {
-		// positions          // texture coords
-		 0.5f,  0.5f, 0.0f,   1.0f, 1.0f, // top right
-		 0.5f, -0.5f, 0.0f,   1.0f, 0.0f, // bottom right
-		-0.5f, -0.5f, 0.0f,   0.0f, 0.0f, // bottom left
-		-0.5f,  0.5f, 0.0f,   0.0f, 1.0f  // top left 
-	};
+	// This is outdated (It is used for 2d coordinates, so if this is split into 2d/3d engines, delete 3d and use this one)
+		//float vertices[] = {
+		//	// positions          // texture coords
+		//	 0.5f,  0.5f, 0.0f,   1.0f, 1.0f, // top right
+		//	 0.5f, -0.5f, 0.0f,   1.0f, 0.0f, // bottom right
+		//	-0.5f, -0.5f, 0.0f,   0.0f, 0.0f, // bottom left
+		//	-0.5f,  0.5f, 0.0f,   0.0f, 1.0f  // top left 
+		//};
 
-	// If we wanna render a rectangle, we need to define the indices of the vertices that make up the rectangle (comment indeces out if you want a triangle)
-	unsigned int indices[] = { // note that we start from 0!
-		0, 1, 3, // first triangle
-		1, 2, 3  // second triangle
-	};
+		// If we wanna render a rectangle, we need to define the indices of the vertices that make up the rectangle (comment any one indeces out if you want a triangle)
+		//unsigned int indices[] = { // note that we start from 0!
+		//	0, 1, 3, // first triangle
+		//	1, 2, 3  // second triangle
+		//};
 
 
 
@@ -182,15 +197,73 @@ int main()
 		};
 	*/
 
+	// Cube Vertices Setup (3D) - Part of Vertex Data Setup
+	// ------------------------------------------------------------------
+
+	// Vertex Data and vertex attribute config for a cube (3D - copied directly from LearnOpenGL Source Code)
+	float vertices[] = {
+		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+	};
+	// world space positions of our cubes (3D)
+	glm::vec3 cubePositions[] = {
+		glm::vec3(0.0f,  0.0f,  0.0f),
+		glm::vec3(2.0f,  5.0f, -15.0f),
+		glm::vec3(-1.5f, -2.2f, -2.5f),
+		glm::vec3(-3.8f, -2.0f, -12.3f),
+		glm::vec3(2.4f, -0.4f, -3.5f),
+		glm::vec3(-1.7f,  3.0f, -7.5f),
+		glm::vec3(1.3f, -2.0f, -2.5f),
+		glm::vec3(1.5f,  2.0f, -2.5f),
+		glm::vec3(1.5f,  0.2f, -1.5f),
+		glm::vec3(-1.3f,  1.0f, -1.5f)
+	};
 
 
 
 
 
-
-
-
-	unsigned int VBO, VAO, EBO;
+	// Use "unsigned int VBO, VAO, EBO" for 2D, but for 3D only use VBO and VAO
+	unsigned int VBO, VAO;
 	/*
 		VBO: Vertex buffer object(VBO) for the triangle(first occurence of an OpenGL object); Has a unique ID corresponding to the VBO
 		VAO: Vertex array object(VAO) for the triangle; Has a unique ID corresponding to the VAO
@@ -201,8 +274,9 @@ int main()
 	glGenVertexArrays(1, &VAO);
 	// Generate a buffer object name (1 = number of buffer objects, &VBO = address of buffer object names)
 	glGenBuffers(1, &VBO);
-	// Generate a buffer object name (1 = number of buffer objects, &EBO = address of buffer object names)
-	glGenBuffers(1, &EBO);
+	// This seems to not be needed for 3D (could be wrong though - need to test)
+		// Generate a buffer object name (1 = number of buffer objects, &EBO = address of buffer object names)
+		//glGenBuffers(1, &EBO);
 
 
 	// bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
@@ -219,26 +293,27 @@ int main()
 		GL_DYNAMIC_DRAW: the data is changed a lot and used many times.
 	*/
 
-	// Bind the element buffer object to a buffer type target (GL_ELEMENT_ARRAY_BUFFER = vertex attributes)
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-	/*
-		GL_STREAM_DRAW: the data is set only once and used by the GPU at most a few times.
-		GL_STATIC_DRAW: the data is set only once and used many times.
-		GL_DYNAMIC_DRAW: the data is changed a lot and used many times.
-	*/
+	// Probably not needed for 3D, only for 2D (not sure though)
+		//// Bind the element buffer object to a buffer type target (GL_ELEMENT_ARRAY_BUFFER = vertex attributes)
+		//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+		//glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+		//*
+		//	GL_STREAM_DRAW: the data is set only once and used by the GPU at most a few times.
+		//	GL_STATIC_DRAW: the data is set only once and used many times.
+		//	GL_DYNAMIC_DRAW: the data is changed a lot and used many times.
+		//*/
 
 	// position attribute
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
-	// color attribute (for shader with color only)
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
+	// color attribute (for shader with color only) - in 3D currently not needed, not sure if would work in 3D
+		//glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		//glEnableVertexAttribArray(1);
 
 	// texture coord attribute
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float))); //prev 2, 2
+	glEnableVertexAttribArray(1); //prev 2
 
 	
 
@@ -330,21 +405,17 @@ int main()
 
 
 
-
-
 	// Technical Stuff
 	// ---------------------------------------------------------
 
 	// Once we go 3D use this (if you do it on fragment shaders it will break the Applications Render and show no shader (so only background color):
-	//glEnable(GL_DEPTH_TEST);
-
-
-
-
-
+	// THis sets the OpenGL state so that it knows how to draw the vertices properly (this is now enabled since 3d coordinates are used)
+	glEnable(GL_DEPTH_TEST); // Enable depth testing (3D)
 
 	bool WireframeActivated = false;
 	bool F2KeyPressed = false;
+
+
 
 	// render loop
 	// -----------
@@ -382,7 +453,9 @@ int main()
 		// render
 		// ------
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		// This is needed for 2D only, use the one below for 3D
+		//glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Also clear the depth buffer now!
 
 		// bind textures on corresponding texture units
 		glActiveTexture(GL_TEXTURE0);
@@ -392,22 +465,73 @@ int main()
 
 
 
-
-
+		// Since we use Shaders in combination with transformations, we need to use the shader in the render loop
+		ourShader.use();
 
 
 		// Used for the rotating square
 		
-		 // create transformations
-		glm::mat4 transform = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-		transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f)); // this moves the position of the square (0,0,0 = center of window)
-		transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+		// create transformations
+		
+		// This was used instead of shaders/the one below for 2D, not used for 3D
+			//glm::mat4 transform = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+		
+		// Model Matrix (3D)
+		glm::mat4 view = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first (Identity Matrix = 1.0f)
+		// Projection Matrix (3D)
+		glm::mat4 projection = glm::mat4(1.0f);
+		
+		//projection = glm::perspective(glm::radians((float)FOV), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, (float)nearPlane, (float)farPlane); // 45.0f = FOV, 0.1f = near plane, 100.0f = far plane | Set in settings section
+		projection = glm::perspective(glm::radians(45.0f), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f); // 45.0f = FOV, 0.1f = near plane, 100.0f = far plane | Set in settings section
+		//view = glm::translate(view, glm::vec3((float)view_x, (float)view_y, (float)view_z)); // 0.0f, 0.0f, -3.0f = x, y, z | Set as float variables in settings section
+		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f)); // 0.0f, 0.0f, -3.0f = x, y, z | Set as float variables in settings section
 
-		// get matrix's uniform location and set matrix (add new ones for each new shader)
-		unsigned int transformLoc = glGetUniformLocation(ourShader.ID, "transform");
-		unsigned int transformLocWireframe = glGetUniformLocation(Wireframe.ID, "transform");
-		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
-		glUniformMatrix4fv(transformLocWireframe, 1, GL_FALSE, glm::value_ptr(transform));
+		// pass transformation matrices to the shader
+		ourShader.setMat4("projection", projection); // This sets the projection matrix for the cube
+		ourShader.setMat4("view", view); // This sets the view matrix for the cube
+
+		// This was for 2D, which is why we did not need to use outShader.use(); inside the Render Loop. In 3D you need to.
+			//transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f)); // this moves the position of the square (0,0,0 = center of window)
+			//transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+			//
+			//// get matrix's uniform location and set matrix (add new ones for each new shader)
+			//unsigned int transformLoc = glGetUniformLocation(ourShader.ID, "transform");
+			//unsigned int transformLocWireframe = glGetUniformLocation(Wireframe.ID, "transform");
+			//glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
+			//glUniformMatrix4fv(transformLocWireframe, 1, GL_FALSE, glm::value_ptr(transform));
+
+
+
+
+
+		//Here is commented code that'll make the square rotate around the screen
+		/*
+			// create transformations
+			glm::mat4 transform = glm::mat4(1.0f);
+			transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f)); // switched the order
+			transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f)); // switched the order
+		*/
+
+		/*	Why does our container now spin around our screen?:
+			== ===================================================
+			Remember that matrix multiplication is applied in reverse. This time a translation is thus
+			applied first to the container positioning it in the bottom-right corner of the screen.
+			After the translation the rotation is applied to the translated container.
+			
+			A rotation transformation is also known as a change-of-basis transformation
+			for when we dig a bit deeper into linear algebra. Since we're changing the
+			basis of the container, the next resulting translations will translate the container
+			based on the new basis vectors. Once the vector is slightly rotated, the vertical
+			translations would also be slightly translated for example.
+			
+			If we would first apply rotations then they'd resolve around the rotation origin (0,0,0), but
+			since the container is first translated, its rotation origin is no longer (0,0,0) making it
+			looks as if its circling around the origin of the scene.
+			
+			If you had trouble visualizing this or figuring it out, don't worry. If you
+			experiment with transformations you'll soon get the grasp of it; all it takes
+			is practice and experience.
+		*/
 
 
 
@@ -415,9 +539,48 @@ int main()
 
 
 
-		// render container
-		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		// Code to draw a 2nd Container, but placed in a different position using transformations only
+		/*
+			glm::mat4 transform = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+			// first container
+			// ---------------
+			transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f));
+			transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+			// get their uniform location and set matrix (using glm::value_ptr)
+			unsigned int transformLoc = glGetUniformLocation(ourShader.ID, "transform");
+			glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
+
+			// with the uniform matrix set, draw the first container (remove the below one if using these:)
+			glBindVertexArray(VAO);
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+			// second transformation
+			// ---------------------
+			transform = glm::mat4(1.0f); // reset it to identity matrix
+			transform = glm::translate(transform, glm::vec3(-0.5f, 0.5f, 0.0f));
+			float scaleAmount = static_cast<float>(sin(glfwGetTime()));
+			transform = glm::scale(transform, glm::vec3(scaleAmount, scaleAmount, scaleAmount));
+			glUniformMatrix4fv(transformLoc, 1, GL_FALSE, &transform[0][0]); // this time take the matrix value array's first element as its memory pointer value
+
+			// now with the uniform matrix being replaced with new transformations, draw it again.
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		*/
+		
+
+
+
+
+
+
+
+
+
+		// Render Object(s)
+
+		// THis draws the 2D Container
+			//// render container
+			//glBindVertexArray(VAO);
+			//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 		/* Old Triangle Code
 		
@@ -431,6 +594,20 @@ int main()
 		ourShader.setFloat("xOffset", triangle_xPos_offset);
 
 		*/
+
+		// Render boxes (3D)
+		// ------------------------------------------------------------------
+		glBindVertexArray(VAO);
+		for (unsigned int i = 0; i < 10; i++) { // 10 = number of cubes, change it to 1 if you only want 1 cube, etc.
+			// calculate the model matrix for each object and pass it to shader before drawing
+			glm::mat4 model = glm::mat4(1.0f); // This sets the model matrix to 1.0f (default) which is the identity matrix
+			model = glm::translate(model, cubePositions[i]); // Set the cube model to the cube positions
+			float angle = 20.0f * i; // 20.0f = angle | i = cube number [This Angle sets the Angle we view the Cube from]
+			model = glm::rotate(model, (float)glfwGetTime() * glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f)); // 1.0f, 0.3f, 0.5f = x, y, z | This rotates the cube around the x, y, z axis | TODO: Set as float variables in settings section
+			ourShader.setMat4("model", model); // This sets the model matrix for the cube
+
+			glDrawArrays(GL_TRIANGLES, 0, 36); // 0 = starting index, 36 = number of vertices
+		}
 		
 
 
@@ -445,7 +622,8 @@ int main()
 	// ------------------------------------------------------------------------
 	glDeleteVertexArrays(1, &VAO);
 	glDeleteBuffers(1, &VBO);
-	glDeleteBuffers(1, &EBO);
+	// Not needed for 3D PROBABLY
+	//glDeleteBuffers(1, &EBO);
 
 	// glfw: terminate, clearing all previously allocated GLFW resources.
 	// ------------------------------------------------------------------
