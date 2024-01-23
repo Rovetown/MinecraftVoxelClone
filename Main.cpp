@@ -16,6 +16,9 @@
 #include "shader_m.h" // Use the shader header file from the Solution Explorer
 //#include <rovetownshaders/shader_m.h> // Include it as a library header file from include location containing glad and glfw3
 
+#include "camera.h" // Use the camera header file from the Solution Explorer
+//#include <rovetownshaders/camera.h> // Include it as a library header file from include location containing glad and glfw3
+
 #include <iostream>
 
 
@@ -26,6 +29,10 @@
 
 // Process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+// mouse_callback is called whenever the mouse moves
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+// scroll_callback is called whenever the mouse scroll wheel scrolls
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 // Process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 void processInput(GLFWwindow* window);
 
@@ -41,12 +48,24 @@ const unsigned int view_x = 0.0f; // 0.0f = default | Width
 const unsigned int view_y = 0.0f; // 0.0f = default | Height
 const unsigned int view_z = -3.0f; // -3.0f = default | Depth
 
+// camera
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+float lastX = SCREEN_WIDTH / 2.0f;
+float lastY = SCREEN_HEIGHT / 2.0f;
+bool firstMouse = true;
 
+// timing
+float deltaTime = 0.0f;	// time between current frame and last frame
+float lastFrame = 0.0f;
 
 // CASE 03: UNIFORM MIX VALUE FOR SHADER
 // stores how much we're seeing of either texture
 //float mixValue = 0.2f;
 
+// Wireframe Mode
+
+bool WireframeActivated = false;
+bool F2KeyPressed = false;
 
 int main()
 {
@@ -89,31 +108,45 @@ int main()
 
 	// Set the current context to the newly created window
 	glfwMakeContextCurrent(window);
-
 	// Tell OpenGL to call framebuffer_size_callback() whenever the window is resized
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	// Cursor Position Callback
+	glfwSetCursorPosCallback(window, mouse_callback);
+	// Scroll Callback
+	glfwSetScrollCallback(window, scroll_callback);
+
+	// tell GLFW to capture our mouse
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	// glad: load all OpenGL function pointers
 	// ---------------------------------------
 	/*
-		If glad wasn't initialized, else it is initialized
+		If glad wasn't initialized, else: it is initialized
 		(important, needs to be initialized after glfwMakeContectCurrent(window);)
 	*/
-	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) // glfwGetProcAddress: Loads the address of the OpenGL function pointers
 	{
 		std::cerr << "Failed to initialize GLAD" << std::endl;
-		glfwTerminate();
+		glfwTerminate(); // Terminate GLFW (This is not in the original code, but i included it for good reasons i guess???)
 		return -1;
 	}
 
+	// Once we go 3D use this (if you do it on fragment shaders it will break the Applications Render and show no shader (so only background color):
+	// This sets the OpenGL state so that it knows how to draw the vertices properly (this is now enabled since 3d coordinates are used)
+	glEnable(GL_DEPTH_TEST); // Enable depth testing (3D)
 
 
-	// build and compile our shader zprogram
-	// ------------------------------------
-	Shader ourShader("6.3.coordinate_systems.vert", "6.3.coordinate_systems.frag");
-
+	// Wireframe Shader
 	// compile and link the color shader program
 	Shader Wireframe("Wireframe.vert", "Wireframe.frag"); // Assuming you have color.vert and color.frag shaders
+
+	// Shader
+	// build and compile our shader zprogram
+	// ------------------------------------
+	Shader ourShader("7.4.camera.vert", "7.4.camera.frag");
+
+
+
 
 
 	// set up vertex data (and buffer(s)) and configure vertex attributes
@@ -197,6 +230,8 @@ int main()
 		};
 	*/
 
+
+	// I think this is how we setup objects in a scene, i probably need a way to not have this like this (automate it or smth)
 	// Cube Vertices Setup (3D) - Part of Vertex Data Setup
 	// ------------------------------------------------------------------
 
@@ -244,7 +279,7 @@ int main()
 		-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
 		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
 	};
-	// world space positions of our cubes (3D)
+	// world space positions of our cubes
 	glm::vec3 cubePositions[] = {
 		glm::vec3(0.0f,  0.0f,  0.0f),
 		glm::vec3(2.0f,  5.0f, -15.0f),
@@ -262,7 +297,7 @@ int main()
 
 
 
-	// Use "unsigned int VBO, VAO, EBO" for 2D, but for 3D only use VBO and VAO
+	// Also use EBO later on for Objects with more complex shapes to gain performance
 	unsigned int VBO, VAO;
 	/*
 		VBO: Vertex buffer object(VBO) for the triangle(first occurence of an OpenGL object); Has a unique ID corresponding to the VBO
@@ -274,7 +309,7 @@ int main()
 	glGenVertexArrays(1, &VAO);
 	// Generate a buffer object name (1 = number of buffer objects, &VBO = address of buffer object names)
 	glGenBuffers(1, &VBO);
-	// This seems to not be needed for 3D (could be wrong though - need to test)
+	// Use this later for Objects with more complex shapes to increase performance
 		// Generate a buffer object name (1 = number of buffer objects, &EBO = address of buffer object names)
 		//glGenBuffers(1, &EBO);
 
@@ -293,7 +328,7 @@ int main()
 		GL_DYNAMIC_DRAW: the data is changed a lot and used many times.
 	*/
 
-	// Probably not needed for 3D, only for 2D (not sure though)
+	// Use this later for Objects with more complex shapes to increase performance
 		//// Bind the element buffer object to a buffer type target (GL_ELEMENT_ARRAY_BUFFER = vertex attributes)
 		//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 		//glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
@@ -312,8 +347,8 @@ int main()
 		//glEnableVertexAttribArray(1);
 
 	// texture coord attribute
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float))); //prev 2, 2
-	glEnableVertexAttribArray(1); //prev 2
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float))); //prev 2, 2 in the 2D version
+	glEnableVertexAttribArray(1); //prev 2 in the 2D version
 
 	
 
@@ -404,34 +439,24 @@ int main()
 	ourShader.setInt("texture2", 1);
 
 
-
-	// Technical Stuff
-	// ---------------------------------------------------------
-
-	// Once we go 3D use this (if you do it on fragment shaders it will break the Applications Render and show no shader (so only background color):
-	// THis sets the OpenGL state so that it knows how to draw the vertices properly (this is now enabled since 3d coordinates are used)
-	glEnable(GL_DEPTH_TEST); // Enable depth testing (3D)
-
-	bool WireframeActivated = false;
-	bool F2KeyPressed = false;
-
-
-
 	// render loop
 	// -----------
 	while (!glfwWindowShouldClose(window))
 	{
+		// per-frame time logic (basically the delta time you know from Unity, Godot and Unreal Engine)
+		// --------------------
+		float currentFrame = static_cast<float>(glfwGetTime());
+		deltaTime = currentFrame - lastFrame;
+		lastFrame = currentFrame;
+
 		// input
 		// -----
 		processInput(window);
 
-		
-
-
 		// WireframeMode
 		if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS && !F2KeyPressed) {
 			WireframeActivated = !WireframeActivated; // Switches between true and false
-			F2KeyPressed = true; // So it doesn't keep switching and bugs out (becuase of how Windows registers the keypress by glfw3)
+			F2KeyPressed = true; // So it doesn't keep switching and bugs out (because of how Windows registers the keypress by glfw3)
 		}
 		else if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_RELEASE) // needs to be released so it can be pressed again (so it doesn't keep switching)
 		{
@@ -449,13 +474,14 @@ int main()
 
 
 
-
 		// render
 		// ------
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // This is the background color (RGBA)
 		// This is needed for 2D only, use the one below for 3D
 		//glClear(GL_COLOR_BUFFER_BIT);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Also clear the depth buffer now!
+
+		// This is needed for 3D only, use the one above for 2D
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Also clear the depth buffer now! Hence the additional clear flag. (3D)
 
 		// bind textures on corresponding texture units
 		glActiveTexture(GL_TEXTURE0);
@@ -476,19 +502,42 @@ int main()
 		// This was used instead of shaders/the one below for 2D, not used for 3D
 			//glm::mat4 transform = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
 		
-		// Model Matrix (3D)
-		glm::mat4 view = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first (Identity Matrix = 1.0f)
-		// Projection Matrix (3D)
-		glm::mat4 projection = glm::mat4(1.0f);
-		
-		//projection = glm::perspective(glm::radians((float)FOV), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, (float)nearPlane, (float)farPlane); // 45.0f = FOV, 0.1f = near plane, 100.0f = far plane | Set in settings section
-		projection = glm::perspective(glm::radians(45.0f), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f); // 45.0f = FOV, 0.1f = near plane, 100.0f = far plane | Set in settings section
-		//view = glm::translate(view, glm::vec3((float)view_x, (float)view_y, (float)view_z)); // 0.0f, 0.0f, -3.0f = x, y, z | Set as float variables in settings section
-		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f)); // 0.0f, 0.0f, -3.0f = x, y, z | Set as float variables in settings section
 
-		// pass transformation matrices to the shader
-		ourShader.setMat4("projection", projection); // This sets the projection matrix for the cube
-		ourShader.setMat4("view", view); // This sets the view matrix for the cube
+
+
+
+		// pass projection matrix to shader (note that in this case it could change every frame
+		
+		// VERSION 1: WITHOUT CAMERA CLASS since it is not changing every frame
+		//glm::mat4 view = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first (Identity Matrix = 1.0f)
+		//projection = glm::perspective(glm::radians((float)FOV), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, (float)nearPlane, (float)farPlane); // 45.0f = FOV, 0.1f = near plane, 100.0f = far plane | Set in settings section
+
+
+		// VERSION 2: WITH CAMERA CLASS
+		//glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, (float)nearPlane, (float)farPlane);
+
+
+		// Projection Matrix (3D)
+		// VERSION 1: WITHOUT CAMERA CLASS since it is not changing every frame
+		//glm::mat4 projection = glm::mat4(1.0f);
+		//view = glm::translate(view, glm::vec3((float)view_x, (float)view_y, (float)view_z)); // 0.0f, 0.0f, -3.0f = x, y, z | Set in settings section
+
+		// VERSION 2: WITH CAMERA CLASS
+		//glm::mat4 view = camera.GetViewMatrix();
+		
+
+		// pass projection matrix to shader (note that in this case it could change every frame)
+		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
+		ourShader.setMat4("projection", projection);
+
+		// camera/view transformation
+		glm::mat4 view = camera.GetViewMatrix();
+		ourShader.setMat4("view", view);
+
+
+		// pass transformation matrices to the shader [I can group this  for the main version together with the respective matrix]
+		//ourShader.setMat4("projection", projection); // This sets the projection matrix for the cube
+		//ourShader.setMat4("view", view); // This sets the view matrix for the cube
 
 		// This was for 2D, which is why we did not need to use outShader.use(); inside the Render Loop. In 3D you need to.
 			//transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f)); // this moves the position of the square (0,0,0 = center of window)
@@ -603,7 +652,7 @@ int main()
 			glm::mat4 model = glm::mat4(1.0f); // This sets the model matrix to 1.0f (default) which is the identity matrix
 			model = glm::translate(model, cubePositions[i]); // Set the cube model to the cube positions
 			float angle = 20.0f * i; // 20.0f = angle | i = cube number [This Angle sets the Angle we view the Cube from]
-			model = glm::rotate(model, (float)glfwGetTime() * glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f)); // 1.0f, 0.3f, 0.5f = x, y, z | This rotates the cube around the x, y, z axis | TODO: Set as float variables in settings section
+			model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f)); // This rotates the cube along the vec3 axis
 			ourShader.setMat4("model", model); // This sets the model matrix for the cube
 
 			glDrawArrays(GL_TRIANGLES, 0, 36); // 0 = starting index, 36 = number of vertices
@@ -622,7 +671,7 @@ int main()
 	// ------------------------------------------------------------------------
 	glDeleteVertexArrays(1, &VAO);
 	glDeleteBuffers(1, &VBO);
-	// Not needed for 3D PROBABLY
+	// Needed if we use EBO's (which we will later on)
 	//glDeleteBuffers(1, &EBO);
 
 	// glfw: terminate, clearing all previously allocated GLFW resources.
@@ -638,6 +687,16 @@ void processInput(GLFWwindow* window)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
+
+	// Camera Movement
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+		camera.ProcessKeyboard(FORWARD, deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+		camera.ProcessKeyboard(BACKWARD, deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		camera.ProcessKeyboard(LEFT, deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		camera.ProcessKeyboard(RIGHT, deltaTime);
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -647,4 +706,34 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	// make sure the viewport matches the new window dimensions; note that width and 
 	// height will be significantly larger than specified on retina displays.
 	glViewport(0, 0, width, height);
+}
+
+// glfw: whenever the mouse moves, this callback is called
+// -------------------------------------------------------
+void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
+{
+    float xpos = static_cast<float>(xposIn);
+    float ypos = static_cast<float>(yposIn);
+
+    if (firstMouse)
+    {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+
+    lastX = xpos;
+    lastY = ypos;
+
+	camera.ProcessMouseMovement(xoffset, yoffset);
+}
+
+// glfw: whenever the mouse scroll wheel scrolls, this callback is called
+// ----------------------------------------------------------------------
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+    camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
